@@ -8,23 +8,23 @@ TARGET_POSES = {
     "Warrior II (Right)": {
         "description": "Right knee bent 90 degrees, arms extended parallel to floor.",
         "angles": {
-            "right_knee":    (100, 20),  # Bent
-            "left_knee":     (175, 15),  # Straight
-            "left_shoulder": (90,  20),  # Arms horizontal
-            "right_shoulder":(90,  20),
-            "right_hip":     (120, 25),  # Torso upright
-            "left_hip":      (120, 25),
+            "right_knee":    (100, 30),  # Bent
+            "left_knee":     (175, 20),  # Straight
+            "left_shoulder": (90,  25),  # Arms horizontal
+            "right_shoulder":(90,  25),
+            "left_elbow":    (175, 20),
+            "right_elbow":   (175, 20),
         }
     },
     "Warrior II (Left)": {
         "description": "Left knee bent 90 degrees, arms extended parallel to floor.",
         "angles": {
-            "left_knee":     (100, 20),  # Bent
-            "right_knee":    (175, 15),  # Straight
-            "left_shoulder": (90,  20),  # Arms horizontal
-            "right_shoulder":(90,  20),
-            "right_hip":     (120, 25),  # Torso upright
-            "left_hip":      (120, 25),
+            "left_knee":     (100, 30),  # Bent
+            "right_knee":    (175, 20),  # Straight
+            "left_shoulder": (90,  25),  # Arms horizontal
+            "right_shoulder":(90,  25),
+            "left_elbow":    (175, 20),
+            "right_elbow":   (175, 20),
         }
     },
 

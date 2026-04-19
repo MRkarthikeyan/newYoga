@@ -33,9 +33,12 @@ try:
     from rpi_lcd import LCD
     lcd = LCD()
     lcd_available = True
-except ImportError:
+    print("Info: LCD Display successfully initialized.")
+except Exception as e:
     lcd = None
     lcd_available = False
+    print(f"Warning: LCD disabled. Reason: {e}")
+    print("         (If on Raspberry Pi, ensure 'rpi_lcd' is installed and I2C is enabled)")
 
 def lcd_show(line1, line2=""):
     """

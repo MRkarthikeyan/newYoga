@@ -37,6 +37,23 @@ except ImportError:
     lcd = None
     lcd_available = False
 
+def lcd_show(line1, line2=""):
+    """
+    Safely write two lines to the LCD.
+    Clears the display first so old text never bleeds through.
+    Falls back silently if LCD is unavailable.
+    """
+    if not lcd_available:
+        return
+    try:
+        lcd.clear()
+        time.sleep(0.05)       # brief I2C settle after clear
+        lcd.text(line1[:16], 1)
+        if line2:
+            lcd.text(line2[:16], 2)
+    except Exception as e:
+        print(f"LCD Error: {e}")
+
 # ---- MediaPipe Init ----
 mp_drawing = mp.solutions.drawing_utils
 mp_pose    = mp.solutions.pose
@@ -275,6 +292,9 @@ def main():
     print("  Keys: [R] Reset  [M] Mirror  [Q] Quit")
     print("=" * 52)
 
+    # Show startup message on LCD
+    lcd_show("Enter into frame", "Yoga Judge Ready")
+
     with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
         while cap.isOpened():
             success, image = cap.read()
@@ -331,6 +351,7 @@ def main():
                         score_buffer = []
                         presence_start_time = 0.0
                         print(f"Person detected — analysis started ({int(ANALYSIS_DURATION)}s window)")
+                        lcd_show("Analysing...", f"Hold for {int(ANALYSIS_DURATION)}s")
                 else:
                     presence_start_time = 0.0
 
@@ -372,15 +393,7 @@ def main():
                             args=(locked_pose_name, locked_score),
                             daemon=True
                         ).start()
-                        if lcd_available:
-                            try:
-                                lcd.clear()                        # wipe old text first
-                                time.sleep(0.05)                   # brief I2C settle
-                                lcd.text(locked_pose_name[:16], 1) # line 1: pose name
-                                lcd.text(f"Score: {locked_score}/10", 2)
-                            except Exception as e:
-                                print(f"LCD Error: {e}")
-                    else:
+                        lcd_show(locked_pose_name, f"Score: {locked_score}/10")
                         # No valid pose detected during the entire window
                         locked_score     = 0
                         locked_pose_name = "No Pose Detected"
@@ -392,15 +405,7 @@ def main():
                             args=("No pose detected", 0),
                             daemon=True
                         ).start()
-                        if lcd_available:                          # was missing entirely
-                            try:
-                                lcd.clear()                        # wipe old text
-                                time.sleep(0.05)
-                                lcd.text("No Pose Detected", 1)    # line 1
-                                lcd.text("Score: 0/10", 2)         # line 2
-                            except Exception as e:
-                                print(f"LCD Error: {e}")
-                    state = STATE_LOCKED
+                        lcd_show("No Pose Detected", "Score: 0/10")
 
             # STATE_LOCKED: frozen — wait for 'R'
 
@@ -443,11 +448,7 @@ def main():
                 pose_found = False
                 competitor_num += 1
                 print(f">>> RESET — Ready for Competitor #{competitor_num} <<<")
-                if lcd_available:
-                    try:
-                        lcd.clear()
-                    except Exception:
-                        pass
+                lcd_show("Enter into frame", f"Competitor #{competitor_num}")
             elif key == ord('m'):
                 mirror = not mirror
                 print(f"Mirror mode: {'ON' if mirror else 'OFF'}")

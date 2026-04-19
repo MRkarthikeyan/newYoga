@@ -44,19 +44,17 @@ mp_pose    = mp.solutions.pose
 # =====================================================================
 # CONFIGURATION — edit these to tune the system
 # =====================================================================
-HOLD_DURATION       = 5.0   # seconds to hold pose before score is locked
-WARMUP_DURATION     = 3.0   # countdown shown before hold timer starts
-DETECTION_THRESHOLD = 6.0   # min score /10 required to trigger the hold
-PRESENCE_DURATION   = 1.5   # seconds a person must be in frame before activation
+ANALYSIS_DURATION   = 5.0   # seconds the system auto-analyses the pose
+DETECTION_THRESHOLD = 6.0   # min score /10 to consider a pose recognised
+PRESENCE_DURATION   = 1.5   # seconds a person must be in frame before scan starts
 MIRROR_MODE         = True   # flip feed horizontally (mirror effect)
 LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "session_log.csv")
 
 # ---- Application States ----
 STATE_NO_PERSON = "NO_PERSON"  # No human body detected
-STATE_WAITING   = "WAITING"    # Person present, no valid pose yet
-STATE_WARMUP    = "WARMUP"     # Valid pose detected — showing 3-2-1 countdown
-STATE_HOLDING   = "HOLDING"    # Hold timer running
-STATE_LOCKED    = "LOCKED"     # Score frozen, waiting for reset
+STATE_WAITING   = "WAITING"    # Person present — waiting 1 s before analysis
+STATE_ANALYZING = "ANALYZING"  # Auto 5-second pose scan is running
+STATE_LOCKED    = "LOCKED"     # Result frozen, waiting for reset
 
 
 # =====================================================================
@@ -184,32 +182,29 @@ def draw_ui(image, state, **kw):
             cv2.putText(image, f"Hold a pose with score >= {DETECTION_THRESHOLD}/10 to start",
                         (15, 70), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (180, 180, 180), 1, cv2.LINE_AA)
 
-    elif state == STATE_WARMUP:
-        countdown = kw.get("countdown", WARMUP_DURATION)
-        pose_name = kw.get("pose_name", "")
-        progress  = 1.0 - (countdown / WARMUP_DURATION)
-        cv2.rectangle(image, (0, 0), (w, 100), (0, 140, 200), -1)
-        cv2.putText(image, f"GET READY: {pose_name}", (15, 38),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.85, (0, 0, 0), 2, cv2.LINE_AA)
-        cv2.putText(image, f"Hold! Starting in {countdown:.1f}s...", (15, 68),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 0), 2, cv2.LINE_AA)
-        draw_progress_bar(image, 10, 85, w - 20, 10, progress, color=(0, 220, 220))
-
-    elif state == STATE_HOLDING:
-        remaining = kw.get("remaining", 0)
+    elif state == STATE_ANALYZING:
+        elapsed   = kw.get("elapsed", 0)
+        remaining = kw.get("remaining", ANALYSIS_DURATION)
         progress  = kw.get("progress", 0)
-        pose_name = kw.get("pose_name", "")
+        pose_name = kw.get("detected_pose", "Scanning...")
         raw_score = kw.get("raw_score", 0)
         feedback  = kw.get("feedback", [])
-        cv2.rectangle(image, (0, 0), (w, 100), (0, 155, 255), -1)
-        cv2.putText(image, f"HOLDING: {pose_name}", (15, 35),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.85, (0, 0, 0), 2, cv2.LINE_AA)
-        cv2.putText(image, f"Time left: {remaining:.1f}s", (15, 65),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 0), 2, cv2.LINE_AA)
-        cv2.putText(image, f"Live: {raw_score}/10", (w - 175, 55),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.75, (0, 0, 0), 2, cv2.LINE_AA)
-        draw_progress_bar(image, 10, 85, w - 20, 10, progress, color=(0, 220, 80))
-        # Show up to 3 fix-tips on screen
+        # Pulsing purple/violet header
+        cv2.rectangle(image, (0, 0), (w, 100), (130, 0, 200), -1)
+        cv2.putText(image, "ANALYSING POSE...", (15, 35),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.9, (255, 255, 255), 2, cv2.LINE_AA)
+        # Live best-match label
+        if pose_name and pose_name != "No pose detected":
+            cv2.putText(image, f"Detecting: {pose_name}  ({raw_score}/10)", (15, 65),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.65, (220, 200, 255), 1, cv2.LINE_AA)
+        else:
+            cv2.putText(image, "No pose recognised yet — hold a pose!", (15, 65),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (180, 140, 255), 1, cv2.LINE_AA)
+        # Countdown bar (fills up as time runs)
+        cv2.putText(image, f"{remaining:.1f}s left", (w - 145, 65),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (255, 255, 255), 1, cv2.LINE_AA)
+        draw_progress_bar(image, 10, 85, w - 20, 10, progress, color=(180, 80, 255))
+        # Fix tips
         if feedback:
             y_off = 125
             cv2.putText(image, "Fix:", (10, y_off),
@@ -223,15 +218,29 @@ def draw_ui(image, state, **kw):
         locked_score   = kw.get("locked_score", 0)
         locked_pose    = kw.get("locked_pose", "")
         competitor_num = kw.get("competitor_num", 1)
-        cv2.rectangle(image, (0, 0), (w, 130), (0, 150, 0), -1)
-        cv2.putText(image, f"SCORE LOCKED  — Competitor #{competitor_num}", (15, 28),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 255, 200), 1, cv2.LINE_AA)
-        cv2.putText(image, locked_pose, (15, 72),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 255), 2, cv2.LINE_AA)
-        cv2.putText(image, f"{locked_score}/10", (w - 210, 115),
-                    cv2.FONT_HERSHEY_SIMPLEX, 2.8, (255, 255, 255), 4, cv2.LINE_AA)
-        cv2.putText(image, "Press 'R' to reset for next competitor", (15, 118),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.48, (180, 255, 180), 1, cv2.LINE_AA)
+        pose_found     = kw.get("pose_found", True)
+
+        if pose_found:
+            # Green header — pose was recognised
+            cv2.rectangle(image, (0, 0), (w, 130), (0, 150, 0), -1)
+            cv2.putText(image, f"RESULT  — Competitor #{competitor_num}", (15, 28),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 255, 200), 1, cv2.LINE_AA)
+            cv2.putText(image, locked_pose, (15, 72),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.1, (255, 255, 255), 2, cv2.LINE_AA)
+            cv2.putText(image, f"{locked_score}/10", (w - 210, 115),
+                        cv2.FONT_HERSHEY_SIMPLEX, 2.8, (255, 255, 255), 4, cv2.LINE_AA)
+        else:
+            # Red header — no pose detected
+            cv2.rectangle(image, (0, 0), (w, 130), (0, 0, 180), -1)
+            cv2.putText(image, f"RESULT  — Competitor #{competitor_num}", (15, 28),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (200, 200, 255), 1, cv2.LINE_AA)
+            cv2.putText(image, "No Pose Detected", (15, 80),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 2, cv2.LINE_AA)
+            cv2.putText(image, "0/10", (w - 150, 115),
+                        cv2.FONT_HERSHEY_SIMPLEX, 2.8, (200, 200, 255), 4, cv2.LINE_AA)
+
+        cv2.putText(image, "Press 'R' to analyse next competitor", (15, 118),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.48, (220, 220, 220), 1, cv2.LINE_AA)
 
 
 # =====================================================================
@@ -244,23 +253,21 @@ def main():
         return
 
     # --- State variables ---
-    state                    = STATE_NO_PERSON
-    presence_start_time      = 0.0
-    warmup_start_time        = 0.0
-    hold_start_time          = 0.0
-    score_buffer             = []
-    locked_score             = 0
-    locked_pose_name         = ""
-    detected_pose_during_hold = ""
-    competitor_num           = 1
-    pTime                    = 0
-    mirror                   = MIRROR_MODE
+    state               = STATE_NO_PERSON
+    presence_start_time = 0.0
+    analysis_start_time = 0.0        # when the 5-second scan started
+    score_buffer        = []         # (pose_name, raw_score) tuples during analysis
+    locked_score        = 0
+    locked_pose_name    = ""
+    pose_found          = False      # True if a valid pose was identified
+    competitor_num      = 1
+    pTime               = 0
+    mirror              = MIRROR_MODE
 
     print("=" * 52)
-    print("  YOGA POSE COMPETITION JUDGE  (Enhanced v2)")
+    print("  YOGA POSE COMPETITION JUDGE  (Enhanced v3)")
     print("=" * 52)
-    print(f"  Hold Duration   : {int(HOLD_DURATION)}s")
-    print(f"  Warmup Countdown: {int(WARMUP_DURATION)}s")
+    print(f"  Analysis Window : {int(ANALYSIS_DURATION)}s (auto-start on entry)")
     print(f"  Min Threshold   : {DETECTION_THRESHOLD}/10")
     print(f"  Mirror Mode     : {'ON' if mirror else 'OFF'}")
     print(f"  Voice (TTS)     : {'ON' if _tts_available else 'OFF (pip install pyttsx3)'}")
@@ -318,52 +325,47 @@ def main():
                     if presence_start_time == 0.0:
                         presence_start_time = now
                     elif (now - presence_start_time) >= PRESENCE_DURATION:
-                        state = STATE_WAITING
+                        # Person has been in frame long enough — start the analysis immediately
+                        state = STATE_ANALYZING
+                        analysis_start_time = now
+                        score_buffer = []
                         presence_start_time = 0.0
-                        print("Person detected — ready.")
+                        print(f"Person detected — analysis started ({int(ANALYSIS_DURATION)}s window)")
                 else:
                     presence_start_time = 0.0
 
             elif state == STATE_WAITING:
-                if not person_present:
+                # Brief intermediate state (currently unused but kept for future use)
+                if person_present:
+                    state = STATE_ANALYZING
+                    analysis_start_time = now
+                    score_buffer = []
+                else:
                     state = STATE_NO_PERSON
                     presence_start_time = 0.0
-                elif detected_pose != "No pose detected" and raw_score >= DETECTION_THRESHOLD:
-                    state = STATE_WARMUP
-                    warmup_start_time = now
-                    detected_pose_during_hold = detected_pose
-                    print(f"Pose '{detected_pose}' detected! Warmup starting...")
 
-            elif state == STATE_WARMUP:
-                elapsed_warmup = now - warmup_start_time
-                if not person_present or raw_score < DETECTION_THRESHOLD:
-                    # Broke pose during warmup — go back to waiting
-                    state = STATE_WAITING
-                    warmup_start_time = 0.0
-                    print("Pose lost during warmup. Back to waiting.")
-                elif elapsed_warmup >= WARMUP_DURATION:
-                    state = STATE_HOLDING
-                    hold_start_time = now
-                    score_buffer = [raw_score]
-                    print(f"Holding '{detected_pose_during_hold}'...")
+            elif state == STATE_ANALYZING:
+                elapsed = now - analysis_start_time
 
-            elif state == STATE_HOLDING:
-                elapsed = now - hold_start_time
-                if not person_present or raw_score < DETECTION_THRESHOLD:
-                    state = STATE_WAITING
-                    score_buffer = []
-                    hold_start_time = 0.0
-                    print("Pose broken! Resetting hold timer.")
-                else:
-                    score_buffer.append(raw_score)
-                    detected_pose_during_hold = detected_pose
-                    if elapsed >= HOLD_DURATION:
-                        avg_raw      = sum(score_buffer) / len(score_buffer)
+                # Always collect scores — even "No pose detected" frames (score 0)
+                if detected_pose != "No pose detected" and raw_score >= DETECTION_THRESHOLD:
+                    score_buffer.append((detected_pose, raw_score))
+
+                if elapsed >= ANALYSIS_DURATION:
+                    # ---- Analysis window over — compute result ----
+                    if score_buffer:
+                        # Pick the most frequently detected pose among top-scoring frames
+                        from collections import Counter
+                        pose_counts = Counter(p for p, _ in score_buffer)
+                        best_pose_name = pose_counts.most_common(1)[0][0]
+                        # Average score only for frames where that pose was detected
+                        relevant_scores = [s for p, s in score_buffer if p == best_pose_name]
+                        avg_raw      = sum(relevant_scores) / len(relevant_scores)
                         locked_score = apply_grading_band(avg_raw)
-                        locked_pose_name = detected_pose_during_hold
-                        state = STATE_LOCKED
-                        print(f"\n>>> SCORE LOCKED: {locked_pose_name} = {locked_score}/10 "
-                              f"(avg {avg_raw:.1f} over {len(score_buffer)} frames) <<<\n")
+                        locked_pose_name = best_pose_name
+                        pose_found   = True
+                        print(f"\n>>> RESULT: {locked_pose_name} = {locked_score}/10 "
+                              f"({len(relevant_scores)} valid frames out of {len(score_buffer)}) <<<\n")
                         log_score(locked_pose_name, locked_score)
                         threading.Thread(
                             target=announce_score,
@@ -372,10 +374,33 @@ def main():
                         ).start()
                         if lcd_available:
                             try:
-                                lcd.text(f"{locked_pose_name[:16]}", 1)
+                                lcd.clear()                        # wipe old text first
+                                time.sleep(0.05)                   # brief I2C settle
+                                lcd.text(locked_pose_name[:16], 1) # line 1: pose name
                                 lcd.text(f"Score: {locked_score}/10", 2)
                             except Exception as e:
                                 print(f"LCD Error: {e}")
+                    else:
+                        # No valid pose detected during the entire window
+                        locked_score     = 0
+                        locked_pose_name = "No Pose Detected"
+                        pose_found       = False
+                        print("\n>>> RESULT: No pose detected <<<\n")
+                        log_score("No Pose Detected", 0)
+                        threading.Thread(
+                            target=announce_score,
+                            args=("No pose detected", 0),
+                            daemon=True
+                        ).start()
+                        if lcd_available:                          # was missing entirely
+                            try:
+                                lcd.clear()                        # wipe old text
+                                time.sleep(0.05)
+                                lcd.text("No Pose Detected", 1)    # line 1
+                                lcd.text("Score: 0/10", 2)         # line 2
+                            except Exception as e:
+                                print(f"LCD Error: {e}")
+                    state = STATE_LOCKED
 
             # STATE_LOCKED: frozen — wait for 'R'
 
@@ -389,22 +414,19 @@ def main():
             if state == STATE_NO_PERSON:
                 draw_ui(image, state, **common)
             elif state == STATE_WAITING:
-                draw_ui(image, state, detected_pose=detected_pose, raw_score=raw_score, **common)
-            elif state == STATE_WARMUP:
-                countdown = max(0, WARMUP_DURATION - (now - warmup_start_time))
-                draw_ui(image, state, pose_name=detected_pose_during_hold, countdown=countdown, **common)
-            elif state == STATE_HOLDING:
-                elapsed   = now - hold_start_time
-                remaining = max(0, HOLD_DURATION - elapsed)
-                progress  = elapsed / HOLD_DURATION
+                draw_ui(image, state, **common)
+            elif state == STATE_ANALYZING:
+                elapsed_a   = now - analysis_start_time
+                remaining_a = max(0, ANALYSIS_DURATION - elapsed_a)
+                progress_a  = elapsed_a / ANALYSIS_DURATION
                 draw_ui(image, state,
-                        pose_name=detected_pose_during_hold,
-                        remaining=remaining, progress=progress,
-                        raw_score=raw_score, feedback=feedback, **common)
+                        elapsed=elapsed_a, remaining=remaining_a, progress=progress_a,
+                        detected_pose=detected_pose, raw_score=raw_score,
+                        feedback=feedback, **common)
             elif state == STATE_LOCKED:
                 draw_ui(image, state,
                         locked_score=locked_score, locked_pose=locked_pose_name,
-                        competitor_num=competitor_num, **common)
+                        pose_found=pose_found, competitor_num=competitor_num, **common)
 
             cv2.imshow("Yoga Pose Competition Judge", image)
 
@@ -412,12 +434,13 @@ def main():
             if key == ord('q'):
                 break
             elif key == ord('r'):
-                state = STATE_WAITING
+                state = STATE_NO_PERSON
                 score_buffer = []
-                hold_start_time = 0.0
-                warmup_start_time = 0.0
+                analysis_start_time = 0.0
+                presence_start_time = 0.0
                 locked_score = 0
                 locked_pose_name = ""
+                pose_found = False
                 competitor_num += 1
                 print(f">>> RESET — Ready for Competitor #{competitor_num} <<<")
                 if lcd_available:

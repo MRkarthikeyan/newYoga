@@ -15,14 +15,14 @@ try:
 except ImportError:
     _tts_available = False
 
+import os
+
 def announce_score(pose_name, score):
-    if not _tts_available:
-        return
     try:
-        engine = pyttsx3.init()
-        engine.setProperty('rate', 150)
-        engine.say(f"{pose_name}. Score: {score} out of 10.")
-        engine.runAndWait()
+        # Run espeak directly as a system command in the background
+        # -s 150 is the speed (words per minute)
+        # 2>/dev/null hides the terminal warnings espeak usually prints
+        os.system(f'espeak -s 150 "{pose_name}. Score: {score} out of 10." 2>/dev/null')
     except Exception as e:
         print(f"Audio Error: {e}")
 

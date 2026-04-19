@@ -8,23 +8,23 @@ TARGET_POSES = {
     "Warrior II (Right)": {
         "description": "Right knee bent 90 degrees, arms extended parallel to floor.",
         "angles": {
-            "right_knee":    (100, 25),  # Bent
-            "left_knee":     (175, 20),  # Straight
+            "right_knee":    (100, 20),  # Bent
+            "left_knee":     (175, 15),  # Straight
             "left_shoulder": (90,  20),  # Arms horizontal
             "right_shoulder":(90,  20),
-            "left_elbow":    (175, 20),
-            "right_elbow":   (175, 20),
+            "right_hip":     (120, 25),  # Torso upright
+            "left_hip":      (120, 25),
         }
     },
     "Warrior II (Left)": {
         "description": "Left knee bent 90 degrees, arms extended parallel to floor.",
         "angles": {
-            "left_knee":     (100, 25),  # Bent
-            "right_knee":    (175, 20),  # Straight
+            "left_knee":     (100, 20),  # Bent
+            "right_knee":    (175, 15),  # Straight
             "left_shoulder": (90,  20),  # Arms horizontal
             "right_shoulder":(90,  20),
-            "left_elbow":    (175, 20),
-            "right_elbow":   (175, 20),
+            "right_hip":     (120, 25),  # Torso upright
+            "left_hip":      (120, 25),
         }
     },
 
@@ -32,7 +32,7 @@ TARGET_POSES = {
     "Tree Pose (Right)": {
         "description": "Left leg straight, right knee bent outward with foot on inner thigh.",
         "angles": {
-            "left_knee":  (175, 20),     # Standing leg straight
+            "left_knee":  (175, 15),     # Standing leg straight
             "right_knee": (45,  30),     # Bent sharply
             "left_hip":   (175, 20),     # Standing torso straight
             "right_hip":  (135, 25),     # Knee points out/down
@@ -41,7 +41,7 @@ TARGET_POSES = {
     "Tree Pose (Left)": {
         "description": "Right leg straight, left knee bent outward with foot on inner thigh.",
         "angles": {
-            "right_knee": (175, 20),     # Standing leg straight
+            "right_knee": (175, 15),     # Standing leg straight
             "left_knee":  (45,  30),     # Bent sharply
             "right_hip":  (175, 20),     # Standing torso straight
             "left_hip":   (135, 25),     # Knee points out/down
@@ -52,23 +52,23 @@ TARGET_POSES = {
     "Triangle Pose (Right)": {
         "description": "Legs apart, torso tilted to the right, arms extended up and down.",
         "angles": {
-            "left_knee":     (175, 20),  # Both legs straight
-            "right_knee":    (175, 20),
-            "right_hip":     (90,  30),  # Torso tilted horizontal over right leg
-            "left_shoulder": (90,  25),  # Left arm reaches up (90 deg to horizontal torso)
-            "left_elbow":    (175, 20),
-            "right_elbow":   (175, 20),
+            "left_knee":     (175, 15),  # Both legs strictly straight
+            "right_knee":    (175, 15),
+            "right_hip":     (90,  20),  # Torso tilted horizontal over right leg
+            "left_hip":      (135, 25),
+            "left_shoulder": (90,  20),  # Arms perpendicular to torso
+            "right_shoulder":(90,  20),
         }
     },
     "Triangle Pose (Left)": {
         "description": "Legs apart, torso tilted to the left, arms extended up and down.",
         "angles": {
-            "left_knee":     (175, 20),  # Both legs straight
-            "right_knee":    (175, 20),
-            "left_hip":      (90,  30),  # Torso tilted horizontal over left leg
-            "right_shoulder":(90,  25),  # Right arm reaches up
-            "left_elbow":    (175, 20),
-            "right_elbow":   (175, 20),
+            "left_knee":     (175, 15),  # Both legs strictly straight
+            "right_knee":    (175, 15),
+            "left_hip":      (90,  20),  # Torso tilted horizontal over left leg
+            "right_hip":     (135, 25),
+            "left_shoulder": (90,  20),  # Arms perpendicular to torso
+            "right_shoulder":(90,  20),
         }
     },
 }
@@ -115,12 +115,17 @@ def evaluate_all_poses(current_angles):
 
         raw_score = round((sum(joint_scores) / len(joint_scores)) * 10, 1)
 
+        # Critical flaw penalty: if any primary joint is completely wrong (<0.2),
+        # heavily penalize the pose so it doesn't get misclassified.
+        if min(joint_scores) < 0.2:
+            raw_score -= 3.0
+
         if raw_score > best_score:
             best_score     = raw_score
             best_pose_name = pose_name
             best_feedback  = feedback
 
     if best_score < DETECTION_THRESHOLD:
-        return "No pose detected", 0.0, []
+        return "No pose detected", 0.0, best_feedback
 
     return best_pose_name, best_score, best_feedback

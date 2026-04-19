@@ -4,28 +4,6 @@ import numpy as np
 # Format: "joint": (target_angle_degrees, tolerance_degrees)
 # Joints: left/right_elbow, left/right_shoulder, left/right_hip, left/right_knee
 TARGET_POSES = {
-    "Mountain Pose": {
-        "description": "Stand tall, arms at sides, body fully upright.",
-        "angles": {
-            "left_knee":     (175, 12),
-            "right_knee":    (175, 12),
-            "left_hip":      (175, 12),
-            "right_hip":     (175, 12),
-            "left_shoulder": (20,  15),
-            "right_shoulder":(20,  15),
-        }
-    },
-    "Warrior I": {
-        "description": "Front knee bent 90 degrees, arms raised overhead.",
-        "angles": {
-            "right_knee":    (90,  15),
-            "left_knee":     (175, 12),
-            "left_shoulder": (170, 15),
-            "right_shoulder":(170, 15),
-            "left_elbow":    (175, 12),
-            "right_elbow":   (175, 12),
-        }
-    },
     "Warrior II": {
         "description": "Front knee bent 90 degrees, arms extended parallel to floor.",
         "angles": {
@@ -44,28 +22,6 @@ TARGET_POSES = {
             "right_knee": (60,  20),
             "left_hip":   (175, 12),
             "right_hip":  (60,  20),
-        }
-    },
-    "Chair Pose": {
-        "description": "Knees bent as if sitting in a chair, arms raised overhead.",
-        "angles": {
-            "left_knee":     (100, 15),
-            "right_knee":    (100, 15),
-            "left_hip":      (100, 15),
-            "right_hip":     (100, 15),
-            "left_shoulder": (165, 15),
-            "right_shoulder":(165, 15),
-        }
-    },
-    "Downward Dog": {
-        "description": "Inverted V shape — straight legs and arms, hips raised high.",
-        "angles": {
-            "left_knee":     (175, 12),
-            "right_knee":    (175, 12),
-            "left_hip":      (90,  15),
-            "right_hip":     (90,  15),
-            "left_shoulder": (175, 12),
-            "right_shoulder":(175, 12),
         }
     },
     "Triangle Pose": {

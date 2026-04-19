@@ -4,35 +4,71 @@ import numpy as np
 # Format: "joint": (target_angle_degrees, tolerance_degrees)
 # Joints: left/right_elbow, left/right_shoulder, left/right_hip, left/right_knee
 TARGET_POSES = {
-    "Warrior II": {
-        "description": "Front knee bent 90 degrees, arms extended parallel to floor.",
+    # ── WARRIOR II ──────────────────────────────
+    "Warrior II (Right)": {
+        "description": "Right knee bent 90 degrees, arms extended parallel to floor.",
         "angles": {
-            "right_knee":    (90,  15),
-            "left_knee":     (175, 12),
-            "left_shoulder": (90,  15),
-            "right_shoulder":(90,  15),
-            "left_elbow":    (175, 12),
-            "right_elbow":   (175, 12),
+            "right_knee":    (100, 25),  # Bent
+            "left_knee":     (175, 20),  # Straight
+            "left_shoulder": (90,  20),  # Arms horizontal
+            "right_shoulder":(90,  20),
+            "left_elbow":    (175, 20),
+            "right_elbow":   (175, 20),
         }
     },
-    "Tree Pose": {
-        "description": "One leg straight, other knee bent outward with foot on inner thigh.",
+    "Warrior II (Left)": {
+        "description": "Left knee bent 90 degrees, arms extended parallel to floor.",
         "angles": {
-            "left_knee":  (175, 12),
-            "right_knee": (60,  20),
-            "left_hip":   (175, 12),
-            "right_hip":  (60,  20),
+            "left_knee":     (100, 25),  # Bent
+            "right_knee":    (175, 20),  # Straight
+            "left_shoulder": (90,  20),  # Arms horizontal
+            "right_shoulder":(90,  20),
+            "left_elbow":    (175, 20),
+            "right_elbow":   (175, 20),
         }
     },
-    "Triangle Pose": {
-        "description": "Legs wide apart, torso tilted sideways, both arms extended.",
+
+    # ── TREE POSE ───────────────────────────────
+    "Tree Pose (Right)": {
+        "description": "Left leg straight, right knee bent outward with foot on inner thigh.",
         "angles": {
-            "left_knee":     (175, 12),
-            "right_knee":    (175, 12),
-            "left_shoulder": (90,  15),
-            "right_shoulder":(90,  15),
-            "left_hip":      (100, 20),
-            "right_hip":     (100, 20),
+            "left_knee":  (175, 20),     # Standing leg straight
+            "right_knee": (45,  30),     # Bent sharply
+            "left_hip":   (175, 20),     # Standing torso straight
+            "right_hip":  (135, 25),     # Knee points out/down
+        }
+    },
+    "Tree Pose (Left)": {
+        "description": "Right leg straight, left knee bent outward with foot on inner thigh.",
+        "angles": {
+            "right_knee": (175, 20),     # Standing leg straight
+            "left_knee":  (45,  30),     # Bent sharply
+            "right_hip":  (175, 20),     # Standing torso straight
+            "left_hip":   (135, 25),     # Knee points out/down
+        }
+    },
+
+    # ── TRIANGLE POSE ───────────────────────────
+    "Triangle Pose (Right)": {
+        "description": "Legs apart, torso tilted to the right, arms extended up and down.",
+        "angles": {
+            "left_knee":     (175, 20),  # Both legs straight
+            "right_knee":    (175, 20),
+            "right_hip":     (90,  30),  # Torso tilted horizontal over right leg
+            "left_shoulder": (90,  25),  # Left arm reaches up (90 deg to horizontal torso)
+            "left_elbow":    (175, 20),
+            "right_elbow":   (175, 20),
+        }
+    },
+    "Triangle Pose (Left)": {
+        "description": "Legs apart, torso tilted to the left, arms extended up and down.",
+        "angles": {
+            "left_knee":     (175, 20),  # Both legs straight
+            "right_knee":    (175, 20),
+            "left_hip":      (90,  30),  # Torso tilted horizontal over left leg
+            "right_shoulder":(90,  25),  # Right arm reaches up
+            "left_elbow":    (175, 20),
+            "right_elbow":   (175, 20),
         }
     },
 }
